@@ -1,77 +1,94 @@
+#include "calc_types.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define MAXBUFFER 20
-typedef struct {
-    char *text;
-    int mode;
-} element;
-
-element stack[MAXBUFFER];
+#define MAXBUFFER 100
+ELEMENT buffer[MAXBUFFER];
 int pos = 0;
-char* ex[MAXBUFFER];
-int o_pos = 0;
 
-void push(element);
-int set_pri(char*);
+int set_pri(char);
+int push(ELEMENT el);
+void create_number(ELEMENT*, char*);
+void create_operation(ELEMENT*, char);
 
-int main(int argc, char* argv[]) {
-    element now_el;
+int main(int argc, char *argv[]) {
+    ELEMENT now_el;
+    char oper[MAXBUFFER];
+    int o_pos = 0;
     for (int i = 1; i < argc; i++) {
         if (isdigit(argv[i][0])) {
-            now_el.mode = 1;
-            now_el.text = argv[i];
-            push(now_el);
-        } else if (o_pos <= MAXBUFFER) switch (argv[i][0]) {
-            case '/': case 'x': case '+': case '-':  
-            for (int hier = set_pri(argv[i]); o_pos > 0 && hier <= set_pri(ex[o_pos-1]);) {
-                now_el.mode =0;
-                now_el.text = ex[--o_pos];
-                push(now_el);
-            };
-            ex[o_pos++] = argv[i];
-            break;
-            case '^': 
-                for (int hier = set_pri(argv[i]); o_pos > 0 && hier < set_pri(ex[o_pos-1]);) {
-                now_el.mode =0;
-                now_el.text = ex[--o_pos];
-                push(now_el);
-            };
-            ex[o_pos++] = argv[i];
-            break;
+            create_number(&now_el, argv[i]);
+            if (push(now_el)) return 1;
+        } else if (MAXBUFFER >= o_pos) switch (argv[i][0]) {
+            case '-': case '+': case '/': case 'x': {
+                for (int hier = set_pri(argv[i][0]); o_pos > 0 && hier <= set_pri(oper[o_pos-1]) && oper[o_pos-1] != 'b';) {
+                    create_operation(&now_el, oper[--o_pos]);
+                    if(push(now_el)) return 1;
+                };
+                oper[o_pos++] = argv[i][0];
+                break;
+            }
+            case '^': {
+                oper[o_pos++] = '^';
+                break;
+            }
             case 'b':
-                ex[o_pos++] = argv[i];
+                oper[o_pos++] = 'b'; 
                 break;
             case 'd':
-                while (o_pos > 0 && ex[o_pos-1][0] != 'b') {
-                    now_el.mode = 0;
-                    now_el.text = ex[--o_pos];
+                while (o_pos > 0 && oper[o_pos-1] != 'b') {
+                    create_operation(&now_el, oper[--o_pos]);  
                     push(now_el);
-                };
-                if (o_pos == 0 || ex[o_pos][0] != 'b') {
-                    printf("unclosed brecker\n");
-                    return 1;
                 }
+                if (o_pos == 0 || oper[o_pos-1] != 'b') {
+                    error("no closed brecker");
+                    return 1;
+                } 
                 o_pos--;
                 break;
-        }
-    };
-    now_el.mode = 0;
+            default: 
+                error("unknow operation: %c", argv[i][0]);
+                return 1;
+        };
+    }
     while (o_pos>0) {
-        now_el.text = ex[--o_pos];
+        create_operation(&now_el, oper[--o_pos]);
         push(now_el);
     };
+    for (int i = 0; i < pos; i++) {
+        switch (buffer[i].type){ 
+            case NUMBER_OP: 
+                printf("%d ", buffer[i].element.NUM.number);
+                break;
+            case OPERATION_OP:
+                printf("%c ", buffer[i].element.OP.op);
+                break;
+        }
+    }
+    putchar('\n');
     return 0;
 }
 
-
-void push(element el) {
-    if (pos >= MAXBUFFER) printf("too much symbols\n");
-    stack[pos++] = el;
+inline void create_number(ELEMENT* el, char *text) {
+    el->type = NUMBER_OP;
+    el->element.NUM.number = atoi(text);
 }
 
-int set_pri(char* op) {
-    switch (op[0]) {
+inline void create_operation(ELEMENT* el, char ch) {
+    el->type = OPERATION_OP;
+    el->element.OP.op = ch;
+}
+int push(ELEMENT el) {
+    if (pos <= MAXBUFFER) {
+        buffer[pos++] = el; 
+        return 0;
+    };
+    error("the stack is already full");
+    return 1;
+}
+
+int set_pri(char i) {
+    switch (i) {
         case '-': case '+':
             return 1;
         case '/': case 'x':
@@ -83,3 +100,4 @@ int set_pri(char* op) {
         default: return -1;
     }
 }
+
