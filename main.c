@@ -22,13 +22,38 @@ int main(int argc, char* argv[]) {
             now_el.mode = 1;
             now_el.text = argv[i];
             push(now_el);
-        } else if (o_pos <= MAXBUFFER) {
+        } else if (o_pos <= MAXBUFFER) switch (argv[i][0]) {
+            case '/': case 'x': case '+': case '-':  
             for (int hier = set_pri(argv[i]); o_pos > 0 && hier <= set_pri(ex[o_pos-1]);) {
                 now_el.mode =0;
                 now_el.text = ex[--o_pos];
                 push(now_el);
-            }
+            };
             ex[o_pos++] = argv[i];
+            break;
+            case '^': 
+                for (int hier = set_pri(argv[i]); o_pos > 0 && hier < set_pri(ex[o_pos-1]);) {
+                now_el.mode =0;
+                now_el.text = ex[--o_pos];
+                push(now_el);
+            };
+            ex[o_pos++] = argv[i];
+            break;
+            case 'b':
+                ex[o_pos++] = argv[i];
+                break;
+            case 'd':
+                while (o_pos > 0 && ex[o_pos-1][0] != 'b') {
+                    now_el.mode = 0;
+                    now_el.text = ex[--o_pos];
+                    push(now_el);
+                };
+                if (o_pos == 0 || ex[o_pos][0] != 'b') {
+                    printf("unclosed brecker\n");
+                    return 1;
+                }
+                o_pos--;
+                break;
         }
     };
     now_el.mode = 0;
@@ -36,10 +61,9 @@ int main(int argc, char* argv[]) {
         now_el.text = ex[--o_pos];
         push(now_el);
     };
-    for (int i = 0; i < pos; i++) printf("%s ", stack[i].text);
-    putchar('\n');
     return 0;
 }
+
 
 void push(element el) {
     if (pos >= MAXBUFFER) printf("too much symbols\n");
@@ -54,7 +78,7 @@ int set_pri(char* op) {
             return 2;
         case '^':
             return 3;
-        case '(':
+        case 'b':
             return 0;
         default: return -1;
     }
