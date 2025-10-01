@@ -2,13 +2,14 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #define MAXBUFFER 100
 ELEMENT buffer[MAXBUFFER];
 int pos = 0;
 
 int set_pri(char);
 int push(ELEMENT el);
-void create_number(ELEMENT*, char*);
+void create_number(ELEMENT*, int);
 void create_operation(ELEMENT*, char);
 
 int main(int argc, char *argv[]) {
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
     int o_pos = 0;
     for (int i = 1; i < argc; i++) {
         if (isdigit(argv[i][0])) {
-            create_number(&now_el, argv[i]);
+            create_number(&now_el, atoi(argv[i]));
             if (push(now_el)) return 1;
         } else if (MAXBUFFER >= o_pos) switch (argv[i][0]) {
             case '-': case '+': case '/': case 'x': {
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]) {
             case 'd':
                 while (o_pos > 0 && oper[o_pos-1] != 'b') {
                     create_operation(&now_el, oper[--o_pos]);  
-                    push(now_el);
+                    if(push(now_el)) return 1;
                 }
                 if (o_pos == 0 || oper[o_pos-1] != 'b') {
                     error("no closed brecker");
@@ -52,26 +53,59 @@ int main(int argc, char *argv[]) {
         };
     }
     while (o_pos>0) {
-        create_operation(&now_el, oper[--o_pos]);
-        push(now_el);
+        if (oper[--o_pos] == 'b') {
+            error("unclosed brecker");
+            return 1;
+        };
+        create_operation(&now_el, oper[o_pos]);
+        if(push(now_el)) return 1;
     };
+    float answer[5];
+    int answer_pos = 0;
     for (int i = 0; i < pos; i++) {
-        switch (buffer[i].type){ 
+        switch (buffer[i].type) {
             case NUMBER_OP: 
-                printf("%d ", buffer[i].element.NUM.number);
+                answer[answer_pos++] = buffer[i].element.NUM.number;
                 break;
-            case OPERATION_OP:
-                printf("%c ", buffer[i].element.OP.op);
-                break;
+            case OPERATION_OP: 
+                if (answer_pos < 2) {
+                    error("not enought argumnets");
+                    return 1; 
+                }
+                answer_pos-=1;
+                switch (buffer[i].element.OP.op) {
+                    case '-': 
+                        answer[answer_pos-1] = answer[answer_pos-1] - answer[answer_pos];
+                        break;
+                    case '+':
+                        answer[answer_pos-1] = answer[answer_pos-1] + answer[answer_pos];
+                        break;
+                    case 'x' :
+                        answer[answer_pos-1] = answer[answer_pos-1] * answer[answer_pos]; 
+                        break;
+                    case '^':
+                        answer[answer_pos-1] = pow(answer[answer_pos-1], answer[answer_pos]);
+                        break;
+                    case '/': 
+                        if (answer[answer_pos+1]==0) {
+                            error("division to zero!");
+                            return 1;
+                        } 
+                        answer[answer_pos-1] = (float) answer[answer_pos-1] / answer[answer_pos];
+                        break;
+                    default:
+                        error("unknown argumnet: %c", buffer[i].element.OP.op);
+                        return 1;
+                } 
         }
     }
-    putchar('\n');
+    printf("%g\n", answer[0]);
     return 0;
 }
 
-inline void create_number(ELEMENT* el, char *text) {
+inline void create_number(ELEMENT* el, int number) {
     el->type = NUMBER_OP;
-    el->element.NUM.number = atoi(text);
+    el->element.NUM.number = number;
 }
 
 inline void create_operation(ELEMENT* el, char ch) {
