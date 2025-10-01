@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
             if (push(now_el)) return 1;
         } else if (MAXBUFFER >= o_pos) switch (argv[i][0]) {
             case '-': case '+': case '/': case 'x': {
-                for (int hier = set_pri(argv[i][0]); o_pos > 0 && hier <= set_pri(oper[o_pos-1]) && oper[o_pos-1] != 'b';) {
+                for (int hier = set_pri(argv[i][0]); o_pos > 0 && 
+                        hier <= set_pri(oper[o_pos-1]) && oper[o_pos-1] != 'b';) {
                     create_operation(&now_el, oper[--o_pos]);
                     if(push(now_el)) return 1;
                 };
@@ -42,7 +43,7 @@ int main(int argc, char *argv[]) {
                     if(push(now_el)) return 1;
                 }
                 if (o_pos == 0 || oper[o_pos-1] != 'b') {
-                    error("no closed brecker");
+                    error("unclosed brecker");
                     return 1;
                 } 
                 o_pos--;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
                         answer[answer_pos-1] = pow(answer[answer_pos-1], answer[answer_pos]);
                         break;
                     case '/': 
-                        if (answer[answer_pos+1]==0) {
+                        if (answer[answer_pos]==0) {
                             error("division to zero!");
                             return 1;
                         } 
