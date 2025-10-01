@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     char oper[MAXBUFFER];
     int o_pos = 0;
     for (int i = 1; i < argc; i++) {
-        if (isdigit(argv[i][0])) {
+        if (isdigit(argv[i][0]) || isdigit(argv[i][1])) {
             create_number(&now_el, atoi(argv[i]));
             if (push(now_el)) return 1;
         } else if (MAXBUFFER >= o_pos) switch (argv[i][0]) {
